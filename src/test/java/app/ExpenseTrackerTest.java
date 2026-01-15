@@ -362,4 +362,115 @@ public class ExpenseTrackerTest {
         assertThrows(IllegalArgumentException.class, () -> tracker.listTransactionsBetweenDates(LocalDate.now().plusDays(1), LocalDate.now()));
         assertThrows(IllegalArgumentException.class, () -> tracker.listTransactionsBetweenDates(LocalDate.now(), LocalDate.now().minusMonths(1)));
     }
+
+    @Test
+    void totalSummaryBetweenDates_shouldReturnAmount() {
+        tracker.updateTransactionNote(tracker.getTransactions().getFirst().id(), "t1");
+        tracker.addTransaction(LocalDate.now(), "A", new BigDecimal("2.00"), "t2");
+        tracker.addTransaction(LocalDate.now().minusDays(3), "B", new BigDecimal("1.00"), "t3");
+        tracker.addTransaction(LocalDate.now().minusDays(4), "C", new BigDecimal("1.00"), "t4");
+
+        LocalDate from = LocalDate.now().minusDays(4);
+        LocalDate to = LocalDate.now().minusDays(3);
+
+        assertEquals(new BigDecimal("2.00"), tracker.totalSummaryBetweenDates(from, to));
+    }
+
+    @Test
+    void totalSummaryBetweenDates_inputEmptyList_shouldReturnZero() {
+        ExpenseTracker t = new ExpenseTracker();
+
+        LocalDate from = LocalDate.now().minusDays(4);
+        LocalDate to = LocalDate.now().minusDays(3);
+
+        assertEquals(new BigDecimal("0"), t.totalSummaryBetweenDates(from, to));
+    }
+
+    @Test
+    void exportToCSV_shouldReturnString() {
+        tracker.addTransaction(LocalDate.now(), "A", new BigDecimal("2.00"), "t2");
+
+        var csv = tracker.exportToCSV();
+        String[] split = csv.split("\n");
+
+        System.out.println(csv);
+
+        assertTrue(csv.contains(tracker.getTransactions().getFirst().id().toString()));
+        assertEquals(3, split.length); // Header and a transaction
+    }
+
+    @Test
+    void exportToCSV_inputEmptyList_shouldReturnString() {
+        ExpenseTracker t = new ExpenseTracker();
+        assertTrue(!t.exportToCSV().contains(tracker.getTransactions().getFirst().id().toString()));
+    }
+
+    @Test
+    void importFromCSV_shouldAddTransactions() {
+        StringBuffer sb = new StringBuffer();
+
+        sb.append("id,date,category,amount,note").append("\n");
+        sb.append(UUID.randomUUID()).append(",");
+        sb.append(LocalDate.now()).append(",");
+        sb.append("Food").append(",");
+        sb.append("20000.00").append(",");
+        sb.append("t2").append("\n");
+
+        assertEquals(1, tracker.getTransactions().size());
+
+        tracker.importFromCSV(sb.toString());
+
+        assertEquals(2, tracker.getTransactions().size());
+    }
+
+    @Test
+    void clearAll_shouldReturnEmptyList() {
+        assertEquals(1, tracker.getTransactions().size());
+        tracker.clearAll();
+        assertTrue(tracker.getTransactions().isEmpty());
+    }
+
+    @Test
+    void importFromCSV_inputCsvReplaceExisting_shouldReturnList() {
+        StringBuffer sb = new StringBuffer();
+
+        sb.append("id,date,category,amount,note").append("\n");
+        sb.append(UUID.randomUUID()).append(",");
+        sb.append(LocalDate.now()).append(",");
+        sb.append("Food").append(",");
+        sb.append("20000.00").append(",");
+        sb.append("t2").append("\n");
+
+        assertEquals(1, tracker.getTransactions().size());
+
+        tracker.importFromCSV(sb.toString(), false);
+
+        assertEquals(2, tracker.getTransactions().size());
+
+        tracker.importFromCSV(sb.toString(), true);
+
+        assertEquals(1, tracker.getTransactions().size());
+    }
+
+    @Test
+    void deleteAllByCategory_shouldReturnEmptyList() {
+        assertEquals(1, tracker.getTransactions().size());
+        assertEquals(1, tracker.deleteAllByCategory("food"));
+        assertEquals(0, tracker.getTransactions().size());
+    }
+
+    @Test
+    void deleteAllByCategory_inputUnmatchCategory_shouldReturnEmptyList() {
+        assertEquals(1, tracker.getTransactions().size());
+        assertEquals(0, tracker.deleteAllByCategory("isekai"));
+        assertEquals(1, tracker.getTransactions().size());
+    }
+
+    @Test
+    void renameCategory_shouldReturnList() {
+        tracker.addTransaction(LocalDate.now(), "A", new BigDecimal("2.00"), "t2");
+
+        assertEquals(1, tracker.renameCategory("A", "Transport"));
+        assertEquals("Food", tracker.getTransactions().get(0).category());
+    }
 }

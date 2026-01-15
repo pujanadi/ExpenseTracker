@@ -48,13 +48,30 @@ public class Main {
         // TODO Day 6
         System.out.println("summaryTotalByCategory:" + tracker.summaryTotalByCategory());
 
-        // Mock live-interview
+        // TODO Day 7: summaryTotalByCategory() -> Map<String, BigDecimal>
 
         // TODO Day 8: summaryTotalByCategoryUsingStreams()
 
+        // TODO Day 9: listSortedByAmountAsc() and listSortedByAmountDesc()
+
         // TODO Day 10: listTransactionsPaged(int page, int size) with validation + tests
 
+        // TODO Day 11: listTransactionsSortedByDateDesc() + tests
+
         // TODO Day 12: listTransactionsBetweenDates(LocalDate from, LocalDate to) + tests
+
+        // TODO Day 13: summaryTotalBetweenDates(LocalDate from, LocalDate to) + tests
+
+        // TODO Day 14: exportToCsv() returning String + tests
+
+        // TODO Day 15: importFromCSV(String csv) + test (basic parser)
+
+        // TODO Day 16: clearAll() and/or import option to append vs replace + tests
+
+        // TODO Day 17: deleteAllByCategory(String category) + tests
+
+        // TODO Day 18: renameCategory(String oldName, String newName) returning int + tests
+
 
 
     }

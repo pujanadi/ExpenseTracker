@@ -1,5 +1,8 @@
 package app;
 
+import util.DateUtil;
+import util.StringUtil;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
@@ -7,7 +10,114 @@ import java.util.stream.Collectors;
 
 public class ExpenseTracker {
 
+    final int CSVHeaderCount = 5;
+
     public record Transaction(UUID id, LocalDate date, String category, BigDecimal amount, String note) {}
+
+    private List<Transaction> transactions = new ArrayList<>();
+
+    public int renameCategory(String oldName, String newName) {
+        if (oldName == null || oldName.isBlank() || newName == null || newName.isBlank()) return 0;
+
+        List<Transaction> renamed = transactions.stream().filter(t -> t.category().equalsIgnoreCase(oldName)).toList();
+
+        for(Transaction t : renamed) {
+            transactions.remove(t);
+
+            transactions.add(
+                new Transaction(
+                    t.id(),
+                    t.date(),
+                    newName,
+                    t.amount(),
+                    t.note()
+                )
+            );
+        }
+
+        return renamed.size();
+    }
+
+    public int deleteAllByCategory(String category) {
+        if(category == null || category.isBlank()) return 0;
+
+        //transactions.removeIf(transaction -> transaction.category.equalsIgnoreCase(category));
+        List<Transaction> deleted = transactions.stream().filter(t -> t.category().equalsIgnoreCase(category)).toList(); //make sure all objects needs to removed
+
+        transactions.removeAll(deleted);
+
+        return deleted.size();
+    }
+
+    public void importFromCSV(String csv, boolean replaceExisting) {
+        if (replaceExisting) clearAll();
+
+        importFromCSV(csv);
+    }
+
+    public void clearAll() {
+        transactions.clear();
+    }
+
+    public void importFromCSV(String csv){
+        if(csv.isBlank()) return;
+
+        String[] records = csv.split("\n");
+
+        String header = records[0];
+        if(!header.equalsIgnoreCase("id,date,category,amount,note")) return; // invalid file format
+
+        if(records.length == 1) return;
+
+        for(int i=1; i<records.length; i++) {
+            String[] t = records[i].split(",");
+
+            if(t.length != CSVHeaderCount) throw new IllegalArgumentException("Invalid CSV row at line: " + (i + 1));
+
+            Transaction transaction = new Transaction(
+                    UUID.fromString(t[0]),
+                    LocalDate.parse(t[1]),
+                    t[2],
+                    new BigDecimal(t[3]),
+                    t[4]
+            );
+
+            transactions.add(transaction);
+        }
+    }
+
+    public String exportToCSV() {
+        StringBuilder sb = new StringBuilder();
+
+        //Header
+        sb.append("ID,DATE,CATEGORY,AMOUNT,NOTE").append("\n");
+
+        //Transaction
+        for(Transaction t : transactions) {
+            sb.append(t.id().toString()).append(",");
+            sb.append(t.date()).append(",");
+            sb.append(StringUtil.csvEscape(t.category())).append(",");
+            sb.append(t.amount()).append(",");
+            sb.append(StringUtil.csvEscape(t.note())).append("\n");
+        }
+        return sb.toString();
+    }
+
+    public BigDecimal totalSummaryBetweenDates(LocalDate from, LocalDate to) {
+        if(transactions.isEmpty()) return BigDecimal.ZERO;
+
+        if( !DateUtil.isNotNullOrEmpty(List.of(from, to)) ) throw new IllegalArgumentException();
+
+
+        BigDecimal sum = BigDecimal.ZERO;
+        for(Transaction t : transactions) {
+            if ( !t.date().isBefore(from) && !t.date().isAfter(to) ) {
+                sum = sum.add(t.amount());
+            }
+        }
+
+        return sum;
+    }
 
     public List<Transaction> listTransactionsBetweenDates(LocalDate from, LocalDate to){
         if (transactions.isEmpty()) return List.of();
@@ -18,7 +128,6 @@ public class ExpenseTracker {
 
         return transactions.stream()
                 .filter( t -> !t.date().isBefore(from) && !t.date().isAfter(to))
-//                .sorted(Comparator.comparing(Transaction::date).reversed())
                 .collect(Collectors.toList());
     }
 
@@ -53,8 +162,6 @@ public class ExpenseTracker {
         int endIndex = Math.min( (page * size), transactions.size());
         return new ArrayList<Transaction> (transactions.subList(startIndex, endIndex));
     }
-
-    private List<Transaction> transactions = new ArrayList<>();
 
     public List<Transaction> listSortedByAmountAsc() {
         if(transactions.isEmpty()) return List.of();
@@ -162,10 +269,10 @@ public class ExpenseTracker {
     }
 
     public void printHeader(){
-    System.out.printf("%-36s  %-10s  %-10s  %12s  %-20s%n",
-            "ID", "DATE", "CATEGORY", "AMOUNT", "NOTE");
-    System.out.println("-".repeat(95));
-}
+        System.out.printf("%-36s  %-10s  %-10s  %12s  %-20s%n",
+                "ID", "DATE", "CATEGORY", "AMOUNT", "NOTE");
+        System.out.println("-".repeat(95));
+    }
 
     public void printRow(){
         for(Transaction t : transactions) {
